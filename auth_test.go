@@ -15,9 +15,7 @@ func TestNewAuth(t *testing.T) {
 		expected *Auth
 	}{
 		{"", nil},
-		{"user", &Auth{User: "user"}},
-		{"user:password", &Auth{User: "user", Password: "password"}},
-		{"user:pass:word", &Auth{User: "user", Password: "pass:word"}},
+		{"token", &Auth{Token: "token"}},
 	}
 
 	for _, tt := range tests {

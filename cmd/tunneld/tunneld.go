@@ -46,6 +46,9 @@ func main() {
 		AutoSubscribe: autoSubscribe,
 		TLSConfig:     tlsconf,
 		Logger:        logger,
+		AuthHandler: func(s string) bool {
+			return s == "baba1"
+		},
 	})
 	if err != nil {
 		fatal("failed to create server: %s", err)

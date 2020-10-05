@@ -138,8 +138,8 @@ func (r *registry) set(i *RegistryItem, identifier id.ID) error {
 
 	if i.Hosts != nil {
 		for _, h := range i.Hosts {
-			if h.Auth != nil && h.Auth.User == "" {
-				return fmt.Errorf("missing auth user")
+			if h.Auth != nil && h.Auth.Token == "" {
+				return fmt.Errorf("missing auth token")
 			}
 			if _, ok := r.hosts[trimPort(h.Host)]; ok {
 				return fmt.Errorf("host %q is occupied", h.Host)

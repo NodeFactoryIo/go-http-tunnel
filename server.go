@@ -41,6 +41,8 @@ type ServerConfig struct {
 	Logger log.Logger
 	// Addr is TCP address to listen for TLS SNI connections
 	SNIAddr string
+
+	AuthHandler func(string) bool
 }
 
 // Server is responsible for proxying public connections to the client over a
@@ -54,6 +56,8 @@ type Server struct {
 	httpClient *http.Client
 	logger     log.Logger
 	vhostMuxer *vhost.TLSMuxer
+
+	authHandler func(string) bool
 }
 
 // NewServer creates a new Server.
@@ -74,6 +78,8 @@ func NewServer(config *ServerConfig) (*Server, error) {
 		listener: listener,
 		logger:   logger,
 	}
+
+	s.authHandler = config.AuthHandler
 
 	t := &http2.Transport{}
 	pool := newConnPool(t, s.disconnected)
@@ -223,7 +229,6 @@ func (s *Server) Start() {
 
 func (s *Server) handleClient(conn net.Conn) {
 	logger := log.NewContext(s.logger).With("addr", conn.RemoteAddr())
-
 	logger.Log(
 		"level", 1,
 		"action", "try connect",
@@ -238,6 +243,8 @@ func (s *Server) handleClient(conn net.Conn) {
 		ok         bool
 
 		inConnPool bool
+
+		token      string
 	)
 
 	tlsConn, ok := conn.(*tls.Conn)
@@ -325,6 +332,31 @@ func (s *Server) handleClient(conn net.Conn) {
 			"err", err,
 		)
 		goto reject
+	}
+
+	// needs additional auth
+	if s.authHandler != nil {
+		token = resp.Header.Get("X-Auth-Header")
+		if token == "" {
+			err = fmt.Errorf("No auth header, status %s", resp.Status)
+			logger.Log(
+				"level", 2,
+				"msg", "handshake failed",
+				"err", err,
+			)
+			goto reject
+		}
+
+		authorized := s.authHandler(token)
+		if !authorized {
+			err = fmt.Errorf("Unauthorized request, status %s", resp.Status)
+			logger.Log(
+				"level", 2,
+				"msg", "handshake failed",
+				"err", err,
+			)
+			goto reject
+		}
 	}
 
 	if resp.ContentLength == 0 {
@@ -563,6 +595,7 @@ func (s *Server) listen(l net.Listener, identifier id.ID) {
 
 // ServeHTTP proxies http connection to the client.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("SERVING HTTP")
 	resp, err := s.RoundTrip(r)
 	if err == errUnauthorised {
 		w.Header().Set("WWW-Authenticate", "Basic realm=\"User Visible Realm\"")
@@ -597,6 +630,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // RoundTrip is http.RoundTriper implementation.
 func (s *Server) RoundTrip(r *http.Request) (*http.Response, error) {
 	identifier, auth, ok := s.Subscriber(r.Host)
+	fmt.Println("NEW ROUND TRIP")
+	fmt.Printf("HOST: %s \n", r.Host)
+	fmt.Printf("AUTH: %s \n", auth)
 	if !ok {
 		return nil, errClientNotSubscribed
 	}
@@ -608,11 +644,17 @@ func (s *Server) RoundTrip(r *http.Request) (*http.Response, error) {
 	outr.Header = cloneHeader(r.Header)
 
 	if auth != nil {
-		user, password, _ := r.BasicAuth()
-		if auth.User != user || auth.Password != password {
+		fmt.Println("CHECK AUTH")
+		token := r.Header.Get("X-Auth-Header")
+		if auth.Token != token {
 			return nil, errUnauthorised
 		}
-		outr.Header.Del("Authorization")
+		outr.Header.Del("X-Auth-Header")
+		// user, password, _ := r.BasicAuth()
+		//if auth.User != user || auth.Password != password {
+		//	return nil, errUnauthorised
+		//}
+		//outr.Header.Del("Authorization")
 	}
 
 	setXForwardedFor(outr.Header, r.RemoteAddr)

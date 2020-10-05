@@ -120,7 +120,7 @@ func makeTunnelClient(t testing.TB, serverAddr string, httpLocalAddr, httpAddr, 
 		proto.HTTP: {
 			Protocol: proto.HTTP,
 			Host:     "localhost",
-			Auth:     "user:password",
+			Auth:     "test-token",
 		},
 		proto.TCP: {
 			Protocol: proto.TCP,
@@ -212,7 +212,7 @@ func testHTTP(t testing.TB, addr net.Addr, payload []byte, repeat uint) {
 		if err != nil {
 			t.Fatal("Failed to create request")
 		}
-		r.SetBasicAuth("user", "password")
+		r.Header.Set("X-Auth-Header", "test-token")
 
 		resp, err := http.DefaultClient.Do(r)
 		if err != nil {

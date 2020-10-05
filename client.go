@@ -40,6 +40,8 @@ type ClientConfig struct {
 	Proxy ProxyFunc
 	// Logger is optional logger. If nil logging is disabled.
 	Logger log.Logger
+	// Auth token
+	AuthToken string
 }
 
 // Client is responsible for creating connection to the server, handling control
@@ -295,6 +297,7 @@ func (c *Client) handleHandshake(w http.ResponseWriter, r *http.Request) {
 		"addr", r.RemoteAddr,
 	)
 
+	w.Header().Add("X-Auth-Header", c.config.AuthToken)
 	w.WriteHeader(http.StatusOK)
 
 	b, err := json.Marshal(c.config.Tunnels)

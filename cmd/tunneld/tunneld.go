@@ -47,7 +47,7 @@ func main() {
 		TLSConfig:     tlsconf,
 		Logger:        logger,
 		AuthHandler: func(s string) bool {
-			return s == "baba1"
+			return s == "auth-token"
 		},
 	})
 	if err != nil {

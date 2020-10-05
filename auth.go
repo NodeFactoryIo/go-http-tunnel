@@ -4,17 +4,11 @@
 
 package tunnel
 
-// Auth holds user and password.
-//type Auth struct {
-//	User     string
-//	Password string
-//}
-
 type Auth struct {
 	Token string
 }
 
-// NewAuth creates new auth from string representation "user:password".
+// NewAuth creates new auth from string.
 func NewAuth(token string) *Auth {
 	if token == "" {
 		return nil

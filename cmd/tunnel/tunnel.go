@@ -102,7 +102,7 @@ func main() {
 		Tunnels:         tunnels(config.Tunnels),
 		Proxy:           proxy(config.Tunnels, logger),
 		Logger:          logger,
-		AuthToken:       "baba2",
+		AuthToken:       "auth-token",
 	})
 	if err != nil {
 		fatal("failed to create client: %s", err)
